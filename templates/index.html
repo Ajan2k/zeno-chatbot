@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Hybrid Chatbot Prototype</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* Minimal clean styles */
+    :root { --accent:#1f8ef1; }
+    body { font-family: Inter, Arial, sans-serif; background:#f4f6f8; margin:0; display:flex; align-items:center; justify-content:center; height:100vh; }
+    .chat-widget { width:420px; max-width:96vw; background:#fff; border-radius:12px; box-shadow:0 6px 30px rgba(0,0,0,0.12); position:relative; overflow:hidden; }
+    .close-btn { position:absolute; right:8px; top:8px; background:#eee; border-radius:50%; width:32px;height:32px; display:flex;align-items:center;justify-content:center;cursor:pointer; }
+    .header { padding:14px 18px; border-bottom:1px solid #eee; display:flex; align-items:center; gap:10px; }
+    .messages { height:480px; overflow:auto; padding:18px; display:flex; flex-direction:column; gap:10px; }
+    .message { max-width:80%; padding:10px 12px; border-radius:10px; }
+    .bot { background:#f1f5fb; align-self:flex-start; }
+    .user { background:var(--accent); color:#fff; align-self:flex-end; }
+    .input-area { padding:12px; border-top:1px solid #eee; display:flex; gap:8px; align-items:center; }
+    input[type="text"], input[type="tel"], input[type="email"] { flex:1; padding:10px; border-radius:8px; border:1px solid #ddd; }
+    button { padding:10px 12px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; }
+    .options { display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
+    .option-btn { padding:8px 10px; background:#eef6ff; border-radius:8px; cursor:pointer; border:1px solid #dbefff; }
+    .small { font-size:12px; color:#666; margin-top:6px; }
+    .summary-block { background:#fbfbfb; padding:10px; border-radius:8px; border:1px dashed #e0e0e0; white-space:pre-wrap; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <div class="chat-widget" id="chat-widget">
+    <div class="close-btn" id="close-btn" title="Close">✕</div>
+    <div class="header"><strong>Help Assistant</strong><div style="flex:1"></div><small class="small">We reply within 30 mins</small></div>
+    <div class="messages" id="messages" aria-live="polite"></div>
+
+    <div class="input-area" id="input-area">
+      <input id="user-input" type="text" placeholder="Type your answer here..." autofocus />
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+
+  <script src="/static/chat.js"></script>
+</body>
+</html>

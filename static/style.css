@@ -1,0 +1,89 @@
+body {
+  font-family: "Poppins", sans-serif;
+  background: #fffaf5;
+  margin: 0;
+  padding: 0;
+}
+
+#chat-widget {
+  width: 400px;
+  height: 600px;
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(255, 140, 0, 0.4);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#chat-header {
+  background: #ff8c00;
+  color: white;
+  padding: 12px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.message {
+  margin: 8px 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  line-height: 1.4;
+  max-width: 80%;
+}
+
+.message.bot {
+  background: #fff2e6;
+  color: #333;
+  align-self: flex-start;
+}
+
+.message.user {
+  background: #ff8c00;
+  color: white;
+  align-self: flex-end;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.option-btn {
+  background: #ff8c00;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.option-btn:hover {
+  background: #e67e00;
+}
+
+#user-input {
+  border: 1px solid #ccc;
+  border-top: none;
+  padding: 12px;
+  outline: none;
+  width: calc(100% - 24px);
+}
+
+#close-btn {
+  cursor: pointer;
+}
