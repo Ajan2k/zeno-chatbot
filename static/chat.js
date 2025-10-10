@@ -4,13 +4,27 @@ const sendBtn = document.getElementById("send-btn");
 const closeBtn = document.getElementById("close-btn");
 const chatWidget = document.getElementById("chat-widget");
 
-closeBtn.addEventListener("click", () => chatWidget.style.display = "none");
+closeBtn.onclick = () => (chatWidget.style.display = "none");
 
 function appendMessage(text, sender = "bot") {
   const div = document.createElement("div");
-  div.className = "message " + (sender === "bot" ? "bot" : "user");
+  div.className = `message ${sender}`;
   div.textContent = text;
   messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function createButtons(options) {
+  const container = document.createElement("div");
+  container.className = "options";
+  options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "option-btn";
+    btn.textContent = opt.label;
+    btn.onclick = opt.onClick;
+    container.appendChild(btn);
+  });
+  messagesEl.appendChild(container);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -36,7 +50,7 @@ sendBtn.addEventListener("click", () => {
   handleTextResponse(text);
 });
 
-inputEl.addEventListener("keydown", (e) => {
+inputEl.addEventListener("keydown", e => {
   if (e.key === "Enter") {
     e.preventDefault();
     sendBtn.click();
@@ -50,7 +64,6 @@ function handleTextResponse(text) {
       state.step = 1;
       appendMessage(`Nice to meet you, ${state.name}! Please enter your contact number.`);
       break;
-
     case 1:
       const phonePattern = /^(\+91[\-\s]?)?[0]?(91)?[6-9]\d{9}$/;
       if (!phonePattern.test(text)) {
@@ -61,10 +74,9 @@ function handleTextResponse(text) {
       state.step = 2;
       appendMessage("Great. Please enter your email address.");
       break;
-
     case 2:
       if (!/^[^@]+@[^@]+\.[^@]+$/.test(text)) {
-        appendMessage("⚠️ That doesn't look like a valid email. Please enter again.");
+        appendMessage("⚠️ Please enter a valid email address.");
         return;
       }
       state.email = text;
@@ -72,36 +84,18 @@ function handleTextResponse(text) {
       appendMessage("Thanks for sharing your info!");
       setTimeout(showMainOptions, 600);
       break;
-
     case 6:
       state.requirement_text = text;
       showPlatformOptions();
       break;
-
-    default:
-      appendMessage("Please select one of the options below 👇");
   }
-}
-
-function createButtons(options) {
-  const container = document.createElement("div");
-  container.className = "options";
-  options.forEach(opt => {
-    const btn = document.createElement("button");
-    btn.className = "option-btn";
-    btn.textContent = opt.label;
-    btn.onclick = () => opt.onClick();
-    container.appendChild(btn);
-  });
-  messagesEl.appendChild(container);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 function showMainOptions() {
   appendMessage("Are you looking for a job or a service/product?");
   createButtons([
     { label: "Looking for a Job", onClick: handleJobOption },
-    { label: "Looking for a Service/Product", onClick: handleServiceOption }
+    { label: "Looking for a Service/Product", onClick: handleServiceOption },
   ]);
 }
 
@@ -118,14 +112,13 @@ function handleServiceOption() {
   appendMessage("Do you have specific requirements?");
   createButtons([
     { label: "Yes", onClick: () => handleRequirement(true) },
-    { label: "No", onClick: () => handleRequirement(false) }
+    { label: "No", onClick: () => handleRequirement(false) },
   ]);
 }
 
 function handleRequirement(hasReq) {
   appendMessage(hasReq ? "Yes" : "No", "user");
-  if (hasReq) appendMessage("Please tell your specific requirements.");
-  else appendMessage("Please describe your product or service idea.");
+  appendMessage(hasReq ? "Please tell your specific requirements." : "Please describe your product or service idea.");
   state.step = 6;
 }
 
@@ -134,7 +127,7 @@ function showPlatformOptions() {
   createButtons([
     { label: "Web App", onClick: () => selectPlatform("Web App") },
     { label: "Mobile App", onClick: () => selectPlatform("Mobile App") },
-    { label: "Both", onClick: () => selectPlatform("Both") }
+    { label: "Both", onClick: () => selectPlatform("Both") },
   ]);
 }
 
@@ -169,16 +162,16 @@ function showUploadUI() {
       <div id="upload-status" class="small"></div>
     </div>`;
   messagesEl.appendChild(box);
+
   const fileInput = box.querySelector("#cv-file");
   const uploadBtn = box.querySelector("#upload-btn");
   const status = box.querySelector("#upload-status");
 
   uploadBtn.addEventListener("click", () => {
     const file = fileInput.files[0];
-    if (!file) return status.textContent = "Please choose a file.";
-    if (file.type !== "application/pdf") return status.textContent = "PDF only.";
-    if (file.size > 5 * 1024 * 1024) return status.textContent = "Max 5 MB.";
-
+    if (!file) return (status.textContent = "Please choose a file.");
+    if (file.type !== "application/pdf") return (status.textContent = "PDF only.");
+    if (file.size > 5 * 1024 * 1024) return (status.textContent = "Max 5 MB.");
     const form = new FormData();
     form.append("file", file);
     status.textContent = "Uploading...";
@@ -195,17 +188,19 @@ function showUploadUI() {
 }
 
 function summarizeDetails() {
-  const payload = { ...state };
   fetch("/summarize", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(state),
   })
     .then(r => r.json())
     .then(d => {
       if (!d.ok) return appendMessage("Error generating summary.");
       appendMessage("Here’s what you’ve entered:");
-      appendMessage(d.summary);
+      const div = document.createElement("div");
+      div.className = "summary-block";
+      div.textContent = d.summary;
+      messagesEl.appendChild(div);
       showDeclaration();
     });
 }
@@ -214,7 +209,7 @@ function showDeclaration() {
   appendMessage("Please confirm your details are correct:");
   createButtons([
     { label: "✅ Yes, I agree", onClick: saveUserData },
-    { label: "❌ No, I want to edit", onClick: () => appendMessage("You can restart the chat to edit details.") }
+    { label: "❌ No, I want to edit", onClick: () => appendMessage("You can restart the chat to edit details.") },
   ]);
 }
 
@@ -226,7 +221,8 @@ function saveUserData() {
   })
     .then(r => r.json())
     .then(d => {
-      if (d.ok) appendMessage("✅ Your details have been saved! Our team will contact you within 30 mins.");
+      if (d.ok)
+        appendMessage("✅ Your details have been saved! Our team will contact you within 30 mins.");
       else appendMessage("⚠️ Error saving details.");
     });
 }
