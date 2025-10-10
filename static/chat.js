@@ -40,8 +40,10 @@ let state = {
   cv_filename: null,
 };
 
+// ---------------- Initial Greeting ----------------
 appendMessage("👋 Hello! Welcome. May I know your name?");
 
+// ---------------- Event Listeners ----------------
 sendBtn.addEventListener("click", () => {
   const text = inputEl.value.trim();
   if (!text) return;
@@ -57,6 +59,7 @@ inputEl.addEventListener("keydown", e => {
   }
 });
 
+// ---------------- Handlers ----------------
 function handleTextResponse(text) {
   switch (state.step) {
     case 0:
@@ -91,6 +94,7 @@ function handleTextResponse(text) {
   }
 }
 
+// ---------------- Main Options ----------------
 function showMainOptions() {
   appendMessage("Are you looking for a job or a service/product?");
   createButtons([
@@ -122,6 +126,7 @@ function handleRequirement(hasReq) {
   state.step = 6;
 }
 
+// ---------------- Platform / Budget ----------------
 function showPlatformOptions() {
   appendMessage("Are you looking for a Web App, Mobile App, or Both?");
   createButtons([
@@ -153,6 +158,7 @@ function selectBudget(b) {
   summarizeDetails();
 }
 
+// ---------------- Upload UI ----------------
 function showUploadUI() {
   const box = document.createElement("div");
   box.innerHTML = `
@@ -187,6 +193,7 @@ function showUploadUI() {
   });
 }
 
+// ---------------- Summary / Declaration ----------------
 function summarizeDetails() {
   fetch("/summarize", {
     method: "POST",
