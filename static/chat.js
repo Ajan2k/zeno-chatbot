@@ -1,16 +1,13 @@
 (() => {
   const root = document.getElementById("zeno-chat");
-  const API_BASE =
-    root?.dataset.apiBase ||
-    (window.ZENO_CHAT && window.ZENO_CHAT.apiBase) ||
-    "";
+  const API_BASE = root?.dataset.apiBase || (window.ZENO_CHAT && window.ZENO_CHAT.apiBase) || "";
 
   const messagesEl = document.getElementById("messages");
   const inputEl = document.getElementById("user-input");
   const sendBtn = document.getElementById("send-btn");
   const chatWidget = document.getElementById("chat-widget");
 
-  // Ensure widget visible (no launcher / no X)
+  // This line is fine, ensures the flexbox layout is active.
   if (chatWidget) chatWidget.style.display = "flex";
 
   function appendMessage(text, sender = "bot") {
@@ -40,29 +37,19 @@
 
   function getInitialState() {
     return {
-      step: 0,
-      name: null,
-      company_name: null,
-      phone: null,
-      email: null,
-      path: null, // "job" | "product"
-      has_requirements: null,
-      requirement_text: null,
-      category: null,
-      employee_size: null,
-      budget: null,
-      budget_amount: null,
-      start_time: null,
+      step: 0, name: null, company_name: null, phone: null, email: null,
+      path: null, has_requirements: null, requirement_text: null, category: null,
+      employee_size: null, budget: null, budget_amount: null, start_time: null,
       cv_filename: null,
     };
   }
   let state = getInitialState();
 
-  // Start
-  function startIntro() { appendMessage("👋 Hello! Welcome. May I know your name?"); }
+  function startIntro() {
+    appendMessage("👋 Hello! Welcome. May I know your name?");
+  }
   startIntro();
 
-  // Events
   sendBtn.addEventListener("click", () => {
     const text = inputEl.value.trim();
     if (!text) return;
@@ -70,21 +57,24 @@
     inputEl.value = "";
     handleTextResponse(text);
   });
-  inputEl.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); sendBtn.click(); } });
+  inputEl.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendBtn.click();
+    }
+  });
 
-  // Steps
   function handleTextResponse(text) {
     switch (state.step) {
       case 0:
         state.name = text; state.step = 1;
+        // FIX: Used template literal for string interpolation
         appendMessage(`Nice to meet you, ${state.name}! What is your company name?`);
         break;
-
       case 1:
         state.company_name = text; state.step = 2;
         appendMessage("Please enter your contact number.");
         break;
-
       case 2: {
         const phonePattern = /^(?:\+91[-\s]?)?(?:0)?[6-9]\d{9}$/;
         if (!phonePattern.test(text)) { appendMessage("⚠️ Please enter a valid 10-digit Indian mobile number."); return; }
@@ -92,7 +82,6 @@
         appendMessage("Great. Please enter your email address.");
         break;
       }
-
       case 3: {
         const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
         if (!emailOk) { appendMessage("⚠️ Please enter a valid email address."); return; }
@@ -101,13 +90,11 @@
         setTimeout(showMainOptions, 500);
         break;
       }
-
       case 6:
         state.requirement_text = text;
         appendMessage("Noted your requirements.");
         showEmployeeSizeOptions();
         break;
-
       case 8: {
         const amt = parseFloat(String(text).replace(/[₹, ]/g, ""));
         if (!amt || amt <= 0) { appendMessage("⚠️ Enter a valid amount in numbers, e.g., 125000"); return; }
@@ -120,7 +107,6 @@
     }
   }
 
-  // Flow
   function showMainOptions() {
     appendMessage("Are you looking for a job or a service/product?");
     createButtons([
@@ -163,23 +149,17 @@
   function askRequirementsThenEmployees() {
     appendMessage("Do you have specific requirements?");
     createButtons([
-      {
-        label: "Yes",
-        onClick: () => {
+      { label: "Yes", onClick: () => {
           appendMessage("Yes", "user");
           state.has_requirements = true;
           appendMessage("Please share your requirements.");
           state.step = 6;
-        }
-      },
-      {
-        label: "No",
-        onClick: () => {
+      }},
+      { label: "No", onClick: () => {
           appendMessage("No", "user");
           state.has_requirements = false;
           showEmployeeSizeOptions();
-        }
-      },
+      }},
     ]);
   }
 
@@ -195,7 +175,6 @@
   function selectEmployeeSize(label) {
     appendMessage(label, "user");
     state.employee_size = label;
-
     if (["AI", "Software Development", "Web Development", "App Development"].includes(state.category)) {
       showBudgetOptions();
     } else {
@@ -243,15 +222,13 @@
     summarizeDetails();
   }
 
-  // Upload UI (Job)
   function showUploadUI() {
     const box = document.createElement("div");
-    box.innerHTML = `
-      <div style="margin-top:6px;">
-        <input id="cv-file" type="file" accept="application/pdf" />
-        <button id="upload-btn" class="option-btn" type="button">Upload</button>
-        <div id="upload-status" class="small"></div>
-      </div>`;
+    box.innerHTML = `<div style="margin-top:6px;">
+      <input id="cv-file" type="file" accept="application/pdf" />
+      <button id="upload-btn" class="option-btn" type="button">Upload</button>
+      <div id="upload-status" class="small"></div>
+    </div>`;
     messagesEl.appendChild(box);
 
     const fileInput = box.querySelector("#cv-file");
@@ -280,19 +257,21 @@
             if (d.email_sent) {
               appendMessage("📧 CV emailed to our sales team.");
             } else if (d.email_error) {
-              appendMessage("⚠️ CV email failed: " + d.email_error);
+              appendMessage(`⚠️ CV email failed: ${d.email_error}`);
             }
             appendMessage("Thanks! Our team will contact you within 30 mins.");
           } else {
             status.textContent = d.error || "Upload failed.";
           }
         })
-        .catch(() => (status.textContent = "Upload failed."))
+        .catch(err => {
+            console.error("Upload fetch error:", err); // OPTIMIZE: Log error
+            status.textContent = "Upload failed.";
+        })
         .finally(() => (uploadBtn.disabled = false));
     });
   }
 
-  // Summary / Declaration (only for Service/Product)
   function summarizeDetails() {
     fetch(API_BASE + "/summarize", {
       method: "POST",
@@ -310,7 +289,10 @@
       messagesEl.scrollTop = messagesEl.scrollHeight;
       if (state.path === "product") showDeclaration();
     })
-    .catch(() => appendMessage("Error generating summary."));
+    .catch(err => {
+        console.error("Summarize fetch error:", err); // OPTIMIZE: Log error
+        appendMessage("Error generating summary.");
+    });
   }
 
   function showDeclaration() {
@@ -337,12 +319,18 @@
     .then(r => r.json())
     .then(d => {
       if (d.ok) {
-        const emailMsg = d.email_sent ? "and emailed to our sales team." : `but email delivery failed${d.email_error ? " ("+d.email_error+")" : ""}.`;
+        // FIX: Used template literal
+        const emailMsg = d.email_sent
+          ? "and emailed to our sales team."
+          : `but email delivery failed${d.email_error ? " ("+d.email_error+")" : ""}.`;
         appendMessage(`✅ Your details have been saved ${emailMsg} Our team will contact you within 30 mins.`);
       } else {
-        appendMessage("⚠️ Error saving details: " + (d.error || "Unknown error"));
+        appendMessage(`⚠️ Error saving details: ${d.error || "Unknown error"}`);
       }
     })
-    .catch(() => appendMessage("⚠️ Error saving details."));
+    .catch(err => {
+        console.error("Save User Data fetch error:", err); // OPTIMIZE: Log error
+        appendMessage("⚠️ Error saving details.");
+    });
   }
 })();
