@@ -19,7 +19,7 @@ app = Flask(__name__)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
 FROM_EMAIL = os.getenv("FROM_EMAIL", "no-reply@infinitecard.in")
-SALES_EMAILS = [e.strip() for e in os.getenv("SALES_EMAILS", "sales@infinitecard.in").split(",") if e.strip()]
+SALES_EMAILS = [e.strip() for e in os.getenv("SALES_EMAILS", "partha@infinitetechai.com").split(",") if e.strip()]
 SENDGRID_TRANSPORT = os.getenv("SENDGRID_TRANSPORT", "auto").lower()  # auto | api | smtp
 SENDGRID_SANDBOX = os.getenv("SENDGRID_SANDBOX", "0") == "1"
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.sendgrid.net")
@@ -158,7 +158,7 @@ def build_dm_table(company_size):
       <div class="estimate-title">Digital Marketing</div>
       <table class="estimate-table">
         <thead><tr><th>Item</th><th>Estimated Cost</th></tr></thead>
-        <tbody><tr><td>Monthly Retainer</td><td>{inr(amt)}/month</td></tr></tbody>
+        <tbody><tr><td>Monthly Retainer</td><td>{inr(amt)}/ month</td></tr></tbody>
       </table>
     """
 
@@ -169,7 +169,7 @@ def build_seo_table(company_size):
       <div class="estimate-title">SEO</div>
       <table class="estimate-table">
         <thead><tr><th>Item</th><th>Estimated Cost</th></tr></thead>
-        <tbody><tr><td>Monthly Retainer</td><td>{inr(monthly)}/month</td></tr></tbody>
+        <tbody><tr><td>Monthly Retainer</td><td>{inr(monthly)}/ month</td></tr></tbody>
       </table>
     """
 
@@ -360,7 +360,7 @@ def summarize():
         category = data.get("category")
         min_term_note = "<p style='margin:8px 0 0;font-style:italic;'>Minimum engagement for this service is 6 months.</p>" if category in ("Digital Marketing","SEO") else ""
         general_note = "" if category in ("Digital Marketing","SEO") else "<p style='margin:10px 0 6px;'>Note: The above pricing is indicative and may vary after we start working and refine the scope in detail.</p>"
-        contact_html = "<p style='margin:6px 0 0;'>Contact: sales@infinitecard.in | +91 98847 77171</p>"
+        contact_html = "<p style='margin:6px 0 0;'>Contact: partha@infinitetechai.com | +91 98847 77171</p>"
         summary_html = f"{estimate_table_html}{min_term_note}{general_note}{contact_html}"
 
         if client_groq:
@@ -403,7 +403,7 @@ def save_user_data():
         category = data.get("category")
         min_term_note = "<p style='margin:8px 0 0;font-style:italic;'>Minimum engagement for this service is 6 months.</p>" if category in ("Digital Marketing","SEO") else ""
         general_note = "" if category in ("Digital Marketing","SEO") else "<p style='margin:10px 0 6px;'>Note: The above pricing is indicative and may vary after we start working and refine the scope in detail.</p>"
-        contact_html = "<p style='margin:6px 0 0;'>Contact: sales@infinitecard.in | +91 98847 77171</p>"
+        contact_html = "<p style='margin:6px 0 0;'>Contact: partha@infinitetechai.com | +91 98847 77171</p>"
         summary_html = f"{estimate_table_html}{min_term_note}{general_note}{contact_html}"
 
         overview = build_lead_overview_html(data)
