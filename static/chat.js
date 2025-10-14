@@ -182,7 +182,7 @@ function askRequirementsThenEmployees() {
       onClick: () => {
         appendMessage("Yes", "user");
         state.has_requirements = true;
-        appendMessage("Please share your requirements (optional).");
+        appendMessage("Please share your requirements.");
         state.step = 6; // After user types, we show employee sizes
       }
     },
