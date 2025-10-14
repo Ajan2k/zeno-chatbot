@@ -5,153 +5,150 @@
   <title>Zeno Chatbot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-     html, body { 
-      height: 100%;
-      margin: 0; 
-    } 
-    body { 
-      background: transparent; 
-    }
-    /* Scoped to avoid conflicts with themes (incl. WordPress) */
+    /* Make the entire iframe surface available */
+    html, body { height: 100%; margin: 0; }
+    body { background: #fff; }
+
+    /* Scoped to avoid CSS conflicts with CMS themes */
     #zeno-chat {
-      --accent:#ff8c00;
-      --accent-light:#fff5e6;
-      --bg:#fff;
-      --text:#222;
+      --accent: #ff8c00;
+      --accent-light: #fff5e6;
+      --bg: #fff;
+      --text: #222;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
     }
 
-    /* Chat widget fixed bottom-right; responsive; always visible */
+    /* Chat widget now fills the iframe completely */
     #zeno-chat .chat-widget {
-      position:fixed;
-      right:20px;
-      bottom:20px;
-      width:360px;
-      max-width:calc(100vw - 24px);
-      height:560px;
-      max-height:calc(100vh - 24px);
-      background:#fff;
-      border-radius:16px;
-      box-shadow:0 10px 30px rgba(0,0,0,0.18);
-      overflow:hidden;
-      display:flex;          /* visible by default */
-      flex-direction:column;
-      z-index:999999;
-      transition:none;       /* no animations */
+      position: absolute;
+      inset: 0;                  /* top:0 right:0 bottom:0 left:0 */
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      border-radius: 0;          /* the WP panel handles rounding */
+      box-shadow: none;          /* panel has its own shadow */
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      z-index: 1;                /* no animations; no launcher/X inside the iframe */
     }
 
     /* Header (no close/X) */
     #zeno-chat .header {
-      padding:14px 18px;
-      background:var(--accent);
-      color:#fff;
-      font-weight:600;
-      font-size:16px;
-      display:flex;
-      align-items:center;
-      justify-content:flex-start;
+      padding: 14px 18px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      flex: 0 0 auto;
     }
 
-    /* Messages fill available space */
+    /* Messages fill remaining space */
     #zeno-chat .messages {
-      flex:1;
-      min-height:0;
-      overflow-y:auto;
-      padding:18px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      scroll-behavior:smooth;
-      background:#fff;
+      flex: 1 1 auto;
+      min-height: 0;             /* critical for flex overflow */
+      overflow-y: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+      background: #fff;
     }
-    #zeno-chat .message {
-      max-width:80%;
-      padding:10px 12px;
-      border-radius:10px;
-      line-height:1.4;
-      word-wrap:break-word;
-    }
-    #zeno-chat .bot { background:var(--accent-light); color:var(--text); align-self:flex-start; }
-    #zeno-chat .user { background:var(--accent); color:#fff; align-self:flex-end; }
 
-    /* Input area */
+    #zeno-chat .message {
+      max-width: 80%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+    #zeno-chat .bot { background: var(--accent-light); color: var(--text); align-self: flex-start; }
+    #zeno-chat .user { background: var(--accent); color: #fff; align-self: flex-end; }
+
+    /* Input area sticks to bottom */
     #zeno-chat .input-area {
-      padding:12px;
-      border-top:1px solid #eee;
-      display:flex;
-      gap:8px;
-      align-items:center;
-      background:#fff;
+      flex: 0 0 auto;
+      padding: 12px;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: #fff;
     }
     #zeno-chat input[type="text"] {
-      flex:1;
-      padding:10px;
-      border-radius:8px;
-      border:1px solid #ddd;
-      font-size:14px;
-      outline:none;
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+      outline: none;
     }
     #zeno-chat input[type="text"]:focus {
-      border-color:var(--accent);
-      box-shadow:0 0 3px rgba(255,140,0,0.3);
+      border-color: var(--accent);
+      box-shadow: 0 0 3px rgba(255,140,0,0.3);
     }
     #zeno-chat button {
-      padding:10px 12px;
-      border-radius:8px;
-      border:none;
-      background:var(--accent);
-      color:#fff;
-      cursor:pointer;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
     }
-    #zeno-chat button:hover { background:#e67e00; }
+    #zeno-chat button:hover { background: #e67e00; }
 
     /* Option buttons */
     #zeno-chat .options {
-      display:flex;
-      gap:8px;
-      margin-top:6px;
-      flex-wrap:wrap;
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+      flex-wrap: wrap;
     }
     #zeno-chat .option-btn {
-      padding:8px 10px;
-      background:var(--accent);
-      color:#fff;
-      border-radius:8px;
-      cursor:pointer;
-      border:none;
+      padding: 8px 10px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
     }
-    #zeno-chat .option-btn[disabled] { opacity:0.5; cursor:not-allowed; }
+    #zeno-chat .option-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
     /* Summary block */
     #zeno-chat .summary-block {
-      background:#fff8ef;
-      padding:10px;
-      border-radius:8px;
-      border:1px dashed #ffcc80;
-      white-space:normal;
-      font-size:14px;
+      background: #fff8ef;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px dashed #ffcc80;
+      white-space: normal;
+      font-size: 14px;
     }
-    #zeno-chat .small { font-size:12px; color:#999; margin-top:4px; }
+    #zeno-chat .small { font-size: 12px; color: #999; margin-top: 4px; }
 
-    #zeno-chat .estimate-title { font-weight:600; margin:8px 0 4px; }
-    #zeno-chat .estimate-table { width:100%; border-collapse:collapse; margin-top:6px; font-size:13px; }
-    #zeno-chat .estimate-table th, #zeno-chat .estimate-table td { border:1px solid #ffd5a3; padding:6px 8px; text-align:left; }
-    #zeno-chat .estimate-table th { background:var(--accent-light); }
+    #zeno-chat .estimate-title { font-weight: 600; margin: 8px 0 4px; }
+    #zeno-chat .estimate-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px; }
+    #zeno-chat .estimate-table th, #zeno-chat .estimate-table td { border: 1px solid #ffd5a3; padding: 6px 8px; text-align: left; }
+    #zeno-chat .estimate-table th { background: var(--accent-light); }
 
-    /* Safety: if any old launcher/X exist, hide them */
-    #zeno-chat .chat-launcher, #zeno-chat .close-btn { display:none !important; }
+    /* Hide any old launcher/X inside iframe */
+    #zeno-chat .chat-launcher, #zeno-chat .close-btn { display: none !important; }
 
+    /* Mobile: the iframe container (WP panel) already resizes; we just fill it */
     @media (max-width: 640px) {
-      #zeno-chat .chat-widget {
-        width:calc(100vw - 16px);
-        height:70vh;
-        right:8px;
-        bottom:8px;
-      }
+      #zeno-chat .header { font-size: 15px; padding: 12px 14px; }
+      #zeno-chat .messages { padding: 14px; }
+      #zeno-chat input[type="text"] { font-size: 15px; }
     }
   </style>
 </head>
 <body>
-  <!-- data-api-base can be set if your WP frontend calls a different domain -->
   <div id="zeno-chat" data-api-base="">
     <div class="chat-widget" id="chat-widget" role="dialog" aria-label="Zeno Chatbot">
       <div class="header"><span>Zeno Chatbot</span></div>
@@ -162,7 +159,6 @@
       </div>
     </div>
   </div>
-
   <script src="/static/chat.js"></script>
 </body>
 </html>
