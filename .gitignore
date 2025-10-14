@@ -1,0 +1,14 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# Uploads folder (if you don't want to track user uploads)
+uploads/
