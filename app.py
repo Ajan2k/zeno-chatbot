@@ -7,13 +7,27 @@ from email.message import EmailMessage
 from urllib.parse import quote_plus
 
 from flask import Flask, render_template, request, jsonify
-from groq import Groq
 from dotenv import load_dotenv
+
+# Optional integrations
+try:
+    from groq import Groq
+except ImportError:
+    Groq = None
+
+try:
+    from flask_cors import CORS
+except ImportError:
+    CORS = None
+
 from pymongo import MongoClient
 from sendgrid import SendGridAPIClient
 
 load_dotenv()
 app = Flask(__name__)
+if CORS:
+    # For WP cross-domain; restrict origins in production
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ---- Config ----
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -37,7 +51,7 @@ MONGO_PARAMS = os.getenv("MONGO_PARAMS", "retryWrites=true&w=majority")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "chatbot")
 MONGO_COLLECTION = os.getenv("MONGO_COLLECTION", "leads")
 
-client_groq = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+client_groq = Groq(api_key=GROQ_API_KEY) if (GROQ_API_KEY and Groq) else None
 
 def build_mongo_uri():
     if MONGODB_URI:
@@ -49,7 +63,9 @@ def build_mongo_uri():
     params = MONGO_PARAMS or ""
     return f"{MONGO_PROTOCOL}://{user}:{pwd}@{MONGO_HOST}/?{params}"
 
-mongo_client = None; mongo_db = None; mongo_col = None
+mongo_client = None
+mongo_db = None
+mongo_col = None
 try:
     uri = build_mongo_uri()
     if uri:
@@ -83,27 +99,30 @@ def inr(n: int) -> str:
 def parse_inr_string(s: str):
     if s is None:
         return None
-    clean = str(s).strip().upper().replace("₹","").replace(",","").replace(" ","")
+    clean = str(s).strip().upper().replace("₹", "").replace(",", "").replace(" ", "")
     num = ""; unit = ""
     for ch in clean:
-        if ch.isdigit() or ch == ".": num += ch
-        else: unit += ch
-    if not num: return None
+        if ch.isdigit() or ch == ".":
+            num += ch
+        else:
+            unit += ch
+    if not num:
+        return None
     val = float(num); mul = 1
     if unit == "K": mul = 1_000
-    elif unit in ("L","LAKH","LAKHS","LAC"): mul = 100_000
-    elif unit in ("CR","CRORE"): mul = 10_000_000
+    elif unit in ("L", "LAKH", "LAKHS", "LAC"): mul = 100_000
+    elif unit in ("CR", "CRORE"): mul = 10_000_000
     return int(round(val * mul))
 
 def budget_to_desc(state):
     b = state.get("budget"); amt = state.get("budget_amount")
-    if amt: return {"type":"fixed","amount":int(amt)}
+    if amt: return {"type": "fixed", "amount": int(amt)}
     if not b: return None
     b = str(b)
-    if "0 <" in b: return {"type":"range","min":0,"max":parse_inr_string("50K")}
-    if "₹50K" in b and "₹1L" in b: return {"type":"range","min":parse_inr_string("50K"),"max":parse_inr_string("1L")}
-    if "₹1L" in b and "₹5L" in b: return {"type":"range","min":parse_inr_string("1L"),"max":parse_inr_string("5L")}
-    if ">" in b: return {"type":"min","min":parse_inr_string("5L")}
+    if "0 <" in b: return {"type": "range", "min": 0, "max": parse_inr_string("50K")}
+    if "₹50K" in b and "₹1L" in b: return {"type": "range", "min": parse_inr_string("50K"), "max": parse_inr_string("1L")}
+    if "₹1L" in b and "₹5L" in b: return {"type": "range", "min": parse_inr_string("1L"), "max": parse_inr_string("5L")}
+    if ">" in b: return {"type": "min", "min": parse_inr_string("5L")}
     return None
 
 def materialize_budget_amount(desc):
@@ -114,82 +133,84 @@ def materialize_budget_amount(desc):
     return None
 
 def build_app_like_table(title, core_label, budget_desc):
-    mapping = [("UI/UX Design",15),(core_label,30),("Dashboard Development",30),("Testing",10),("Deployment",10),("API & hosting",5)]
+    mapping = [("UI/UX Design", 15), (core_label, 30), ("Dashboard Development", 30), ("Testing", 10), ("Deployment", 10), ("API & hosting", 5)]
     base = materialize_budget_amount(budget_desc)
     rows_html = []; total_sum = 0
     for label, p in mapping:
-        if base is None: cost_cell = "-"
+        if base is None:
+            cost_cell = "-"
         else:
             amt = round(base * p / 100); total_sum += amt; cost_cell = inr(amt)
         rows_html.append(f"<tr><td>{label}</td><td>{cost_cell}</td></tr>")
     total_cell = "-" if base is None else inr(total_sum)
     return f"""
-      <div class="estimate-title">{title}</div>
-      <table class="estimate-table">
-        <thead><tr><th>Component</th><th>Estimated Cost</th></tr></thead>
-        <tbody>{''.join(rows_html)}</tbody>
-        <tfoot><tr><th>Total</th><th>{total_cell}</th></tr></tfoot>
-      </table>
-    """
+<div class="estimate-title">{title}</div>
+<table class="estimate-table">
+  <thead><tr><th>Component</th><th>Estimated Cost</th></tr></thead>
+  <tbody>{''.join(rows_html)}</tbody>
+  <tfoot><tr><th>Total</th><th>{total_cell}</th></tr></tfoot>
+</table>
+"""
 
 def build_web_table(budget_desc):
-    mapping = [("UI/UX Design",20),("Web Development",50),("Testing",10),("Deployment",10),("API & hosting",10)]
+    mapping = [("UI/UX Design", 20), ("Web Development", 50), ("Testing", 10), ("Deployment", 10), ("API & hosting", 10)]
     base = materialize_budget_amount(budget_desc)
     rows_html = []; total_sum = 0
     for label, p in mapping:
-        if base is None: cost_cell = "-"
+        if base is None:
+            cost_cell = "-"
         else:
             amt = round(base * p / 100); total_sum += amt; cost_cell = inr(amt)
         rows_html.append(f"<tr><td>{label}</td><td>{cost_cell}</td></tr>")
     total_cell = "-" if base is None else inr(total_sum)
     return f"""
-      <div class="estimate-title">Web Development</div>
-      <table class="estimate-table">
-        <thead><tr><th>Component</th><th>Estimated Cost</th></tr></thead>
-        <tbody>{''.join(rows_html)}</tbody>
-        <tfoot><tr><th>Total</th><th>{total_cell}</th></tr></tfoot>
-      </table>
-    """
+<div class="estimate-title">Web Development</div>
+<table class="estimate-table">
+  <thead><tr><th>Component</th><th>Estimated Cost</th></tr></thead>
+  <tbody>{''.join(rows_html)}</tbody>
+  <tfoot><tr><th>Total</th><th>{total_cell}</th></tr></tfoot>
+</table>
+"""
 
 def build_dm_table(company_size):
     price_map = {"0-10": 25_000, "10-100": 40_000, "100+": 70_000}
     amt = price_map.get(company_size)
     return f"""
-      <div class="estimate-title">Digital Marketing</div>
-      <table class="estimate-table">
-        <thead><tr><th>Item</th><th>Estimated Cost</th></tr></thead>
-        <tbody><tr><td>Monthly Retainer</td><td>{inr(amt)}/ month</td></tr></tbody>
-      </table>
-    """
+<div class="estimate-title">Digital Marketing</div>
+<table class="estimate-table">
+  <thead><tr><th>Item</th><th>Estimated Cost</th></tr></thead>
+  <tbody><tr><td>Monthly Retainer</td><td>{inr(amt)}/ month</td></tr></tbody>
+</table>
+"""
 
 def build_seo_table(company_size):
     price_map = {"0-10": 10_000, "10-100": 15_000, "100+": 20_000}
     monthly = price_map.get(company_size)
     return f"""
-      <div class="estimate-title">SEO</div>
-      <table class="estimate-table">
-        <thead><tr><th>Item</th><th>Estimated Cost</th></tr></thead>
-        <tbody><tr><td>Monthly Retainer</td><td>{inr(monthly)}/ month</td></tr></tbody>
-      </table>
-    """
+<div class="estimate-title">SEO</div>
+<table class="estimate-table">
+  <thead><tr><th>Item</th><th>Estimated Cost</th></tr></thead>
+  <tbody><tr><td>Monthly Retainer</td><td>{inr(monthly)}/ month</td></tr></tbody>
+</table>
+"""
 
 def build_estimate_table_only(data):
     category = data.get("category"); employee_size = data.get("employee_size"); budget_desc = budget_to_desc(data)
-    if category == "AI": return build_app_like_table("AI Development","AI Development",budget_desc)
-    if category == "Software Development": return build_app_like_table("Software Development","Software Development",budget_desc)
-    if category == "App Development": return build_app_like_table("App Development","App Development",budget_desc)
+    if category == "AI": return build_app_like_table("AI Development", "AI Development", budget_desc)
+    if category == "Software Development": return build_app_like_table("Software Development", "Software Development", budget_desc)
+    if category == "App Development": return build_app_like_table("App Development", "App Development", budget_desc)
     if category == "Web Development": return build_web_table(budget_desc)
     if category == "Digital Marketing": return build_dm_table(employee_size)
     if category == "SEO": return build_seo_table(employee_size)
     return """
-      <div class="estimate-title">Estimate</div>
-      <table class="estimate-table">
-        <thead><tr><th>Item</th><th>Estimated Cost</th></tr></thead>
-        <tbody><tr><td>-</td><td>-</td></tr></tbody>
-      </table>
-    """
+<div class="estimate-title">Estimate</div>
+<table class="estimate-table">
+  <thead><tr><th>Item</th><th>Estimated Cost</th></tr></thead>
+  <tbody><tr><td>-</td><td>-</td></tr></tbody>
+</table>
+"""
 
-# ---- Email (attachments, API -> SMTP fallback) ----
+# ---- Email (SendGrid API + SMTP fallback) ----
 def send_via_sendgrid_api(to_email, subject, html, reply_to=None, sandbox=False, attachments=None):
     if not SENDGRID_API_KEY:
         return False, "Missing SENDGRID_API_KEY"
@@ -296,22 +317,19 @@ def upload_cv():
             return jsonify({"ok": False, "error": "No file selected"})
         if not allowed_file(file.filename):
             return jsonify({"ok": False, "error": "Only PDF files allowed"})
-        file.seek(0, os.SEEK_END)
-        if file.tell() > MAX_FILE_SIZE:
-            return jsonify({"ok": False, "error": "File size exceeds 5 MB"})
-        file.seek(0)
 
-        # Read bytes for email attachment
         file_bytes = file.read()
-        file.seek(0)
+        if len(file_bytes) > MAX_FILE_SIZE:
+            return jsonify({"ok": False, "error": "File size exceeds 5 MB"})
 
-        # Save file to disk
+        # Save file
         safe_name = os.path.basename(file.filename).replace(" ", "_")
         filename = f"{datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{safe_name}"
         save_path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(save_path)
+        with open(save_path, "wb") as f:
+            f.write(file_bytes)
 
-        # Parse state for email context
+        # Parse state
         user_data = {}
         data_json = request.form.get("state_json")
         if data_json:
@@ -322,7 +340,7 @@ def upload_cv():
         user_data["cv_filename"] = filename
         user_data["path"] = user_data.get("path") or "job"
 
-        # Build email with attachment
+        # Email with attachment
         overview = build_lead_overview_html(user_data)
         html_body = f"<div style='font-family:Arial,Helvetica,sans-serif;line-height:1.45;color:#222'><h2 style='margin:0 0 10px'>New CV Upload</h2>{overview}<p style='margin:8px 0 0;'>CV attached.</p></div>"
         attachments = [{"filename": filename, "type":"application/pdf", "content": file_bytes}]
@@ -330,7 +348,7 @@ def upload_cv():
 
         email_ok, email_err = send_sales_email(user_data, html_body, subject, attachments=attachments)
 
-        # Optionally store a minimal record for job applicants
+        # Save minimal record
         if mongo_col is not None:
             try:
                 mongo_col.insert_one({
@@ -430,5 +448,9 @@ def not_found(e):
 def internal_error(e):
     return jsonify({"ok": False, "error": "Internal server error"}), 500
 
+@app.route("/health")
+def health():
+    return jsonify({"ok": True, "status": "healthy"})
+
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=int(os.getenv("PORT", "5000")))
