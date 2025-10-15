@@ -9,8 +9,26 @@
   const inputEl = document.getElementById("user-input");
   const sendBtn = document.getElementById("send-btn");
   const chatWidget = document.getElementById("chat-widget");
+  const inputArea = document.getElementById("input-area");
+  const restartIcon = document.getElementById("restart-icon");
 
   if (chatWidget) chatWidget.style.display = "flex";
+
+  // Input state management
+  function disableInput() {
+    inputEl.disabled = true;
+    sendBtn.disabled = true;
+    inputArea.classList.add("disabled");
+    inputEl.placeholder = "Please select an option above...";
+  }
+
+  function enableInput(placeholder = "Type your answer...") {
+    inputEl.disabled = false;
+    sendBtn.disabled = false;
+    inputArea.classList.remove("disabled");
+    inputEl.placeholder = placeholder;
+    inputEl.focus();
+  }
 
   function appendMessage(text, sender = "bot") {
     const div = document.createElement("div");
@@ -23,14 +41,23 @@
   function createButtons(options) {
     const container = document.createElement("div");
     container.className = "options";
+    
+    // Disable text input when buttons are shown
+    disableInput();
+    
     options.forEach(opt => {
       const btn = document.createElement("button");
       btn.className = "option-btn";
       btn.type = "button";
       btn.textContent = opt.label;
       btn.onclick = () => {
+        // Disable all buttons in this group
         Array.from(container.querySelectorAll("button")).forEach(b => (b.disabled = true));
-        if (typeof opt.onClick === "function") opt.onClick();
+        
+        // Execute callback
+        if (typeof opt.onClick === "function") {
+          opt.onClick();
+        }
       };
       container.appendChild(btn);
     });
@@ -45,7 +72,7 @@
       company_name: null,
       phone: null,
       email: null,
-      path: null, // "job" | "product"
+      path: null,
       has_requirements: null,
       requirement_text: null,
       category: null,
@@ -55,12 +82,14 @@
       start_time: null,
       cv_filename: null,
       closing_ready: false,
-      closing_sent: false
+      closing_sent: false,
+      awaiting_custom_budget: false,
+      conversation_ended: false
     };
   }
   let state = getInitialState();
 
-  const CLOSING_REGEX = /\b(thanks|thank\s*you|thanku|thx|ty|ok|okay|k|sure|great|awesome|cool|perfect|done|noted|sounds\s*good|cheers)\b/i;
+  const CLOSING_REGEX = /\b(thanks|thank\s*you|thanku|thx|ty|ok|okay|k|sure|great|awesome|cool|perfect|done|noted|sounds\s*good|cheers|good|nice|alright|fine)\b/i;
 
   function maybeHandleClosing(userText) {
     if (!state.closing_ready || state.closing_sent) return false;
@@ -71,24 +100,59 @@
     appendMessage(
       `You're most welcome${name}! We're delighted to work${company}. Our team will reach out within 30 minutes. You can also contact us at partha@infinitetechai.com | +91 98847 77171. Have a great day!`
     );
+    
+    // NOW mark conversation as ended
     state.closing_sent = true;
+    state.conversation_ended = true;
+    
+    // Show restart icon
+    restartIcon.classList.add("visible");
+    
+    // Disable input
+    disableInput();
+    inputEl.placeholder = "Conversation ended. Click restart icon to begin again.";
+    
     return true;
   }
 
   function startIntro() {
     appendMessage("👋 Hello! Welcome. May I know your name?");
+    state.step = 0;
+    enableInput("Enter your name...");
   }
+
+  function restartConversation() {
+    // Clear messages
+    messagesEl.innerHTML = "";
+    
+    // Reset state
+    state = getInitialState();
+    
+    // Hide restart icon
+    restartIcon.classList.remove("visible");
+    
+    // Start fresh
+    startIntro();
+  }
+
+  // Restart icon click handler
+  restartIcon.addEventListener("click", restartConversation);
+
   startIntro();
 
   sendBtn.addEventListener("click", () => {
     const text = inputEl.value.trim();
     if (!text) return;
+    
     appendMessage(text, "user");
     inputEl.value = "";
 
+    // Check if this is a closing acknowledgment
     if (maybeHandleClosing(text)) return;
+    
     handleTextResponse(text);
   });
+
   inputEl.addEventListener("keydown", e => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -102,23 +166,27 @@
         state.name = text;
         state.step = 1;
         appendMessage(`Nice to meet you, ${state.name}! What is your company name?`);
+        enableInput("Enter your company name...");
         break;
 
       case 1:
         state.company_name = text;
         state.step = 2;
         appendMessage("Please enter your contact number.");
+        enableInput("Enter your phone number...");
         break;
 
       case 2: {
         const phonePattern = /^(?:\+91[-\s]?)?(?:0)?[6-9]\d{9}$/;
         if (!phonePattern.test(text)) {
           appendMessage("⚠️ Please enter a valid 10-digit Indian mobile number.");
+          enableInput("Enter valid phone number...");
           return;
         }
         state.phone = text;
         state.step = 3;
         appendMessage("Great. Please enter your email address.");
+        enableInput("Enter your email...");
         break;
       }
 
@@ -126,40 +194,61 @@
         const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
         if (!emailOk) {
           appendMessage("⚠️ Please enter a valid email address.");
+          enableInput("Enter valid email...");
           return;
         }
         state.email = text;
         state.step = 4;
         appendMessage("Thanks for sharing your info!");
+        disableInput();
         setTimeout(showMainOptions, 500);
         break;
       }
 
       case 6:
         state.requirement_text = text;
+        state.step = 0;
         appendMessage("Noted your requirements.");
+        disableInput();
         showEmployeeSizeOptions();
         break;
 
       case 8: {
-        const amt = parseFloat(String(text).replace(/[₹, ]/g, ""));
-        if (!amt || amt <= 0) {
-          appendMessage("⚠️ Enter a valid amount in numbers, e.g., 125000");
+        // Custom budget amount entry
+        const cleanText = text.replace(/[₹,\s]/g, "");
+        const amt = parseFloat(cleanText);
+        
+        if (!amt || amt <= 0 || isNaN(amt)) {
+          appendMessage("⚠️ Please enter a valid amount in numbers (e.g., 125000 or 1.25L)");
+          enableInput("Enter budget amount...");
           return;
         }
+        
         state.budget = "Custom";
         state.budget_amount = Math.round(amt);
+        state.awaiting_custom_budget = false;
+        state.step = 0;
+        
         appendMessage(
           `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(
             state.budget_amount
           )}`,
           "user"
         );
+        
+        disableInput();
         askStartTime();
         break;
       }
 
       default:
+        // If conversation hasn't started or ended, ignore random input
+        if (state.conversation_ended) {
+          // Do nothing, conversation is over
+        } else if (state.step === 0 && !state.name) {
+          // Restart intro if somehow lost
+          startIntro();
+        }
         break;
     }
   }
@@ -213,6 +302,7 @@
           state.has_requirements = true;
           appendMessage("Please share your requirements.");
           state.step = 6;
+          enableInput("Enter your requirements...");
         },
       },
       {
@@ -261,13 +351,16 @@
     appendMessage(b, "user");
     state.budget = b;
     delete state.budget_amount;
+    state.awaiting_custom_budget = false;
     askStartTime();
   }
 
   function enterCustomBudget() {
     appendMessage("Other (enter amount)", "user");
-    appendMessage("Please enter your estimated budget amount in ₹ (numbers only, e.g., 125000).");
+    appendMessage("Please enter your estimated budget amount in ₹ (e.g., 125000 or 1.25L)");
     state.step = 8;
+    state.awaiting_custom_budget = true;
+    enableInput("Enter budget amount...");
   }
 
   function askStartTime() {
@@ -296,6 +389,9 @@
       </div>
     `;
     messagesEl.appendChild(box);
+    
+    // Keep input disabled during file upload
+    disableInput();
 
     const fileInput = box.querySelector("#cv-file");
     const uploadBtn = box.querySelector("#upload-btn");
@@ -325,18 +421,31 @@
             } else if (d.email_error) {
               appendMessage("⚠️ CV email failed: " + d.email_error);
             }
-            appendMessage("Thanks! Our team will contact you within 30 minutes.");
+            
+            // Show thank you message and WAIT for user response
+            appendMessage("Thank you for applying! Our team will contact you within 30 minutes.");
+            
+            // Enable closing ready (waiting for user to say thanks/ok)
             state.closing_ready = true;
+            
+            // Enable input so user can respond
+            enableInput("Type 'ok' or 'thanks'...");
+            
           } else {
             status.textContent = d.error || "Upload failed.";
+            uploadBtn.disabled = false;
           }
         })
-        .catch(() => (status.textContent = "Upload failed."))
-        .finally(() => (uploadBtn.disabled = false));
+        .catch(() => {
+          status.textContent = "Upload failed.";
+          uploadBtn.disabled = false;
+        });
     });
   }
 
   function summarizeDetails() {
+    disableInput();
+    
     fetch(API_BASE + "/summarize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -364,14 +473,10 @@
     ]);
   }
 
-  function restartConversation() {
-    appendMessage("🔁 Restarting the conversation below. Let's begin again.");
-    state = getInitialState();
-    startIntro();
-  }
-
   function saveUserData() {
     appendMessage("📧 Sending your details to our team...", "bot");
+    disableInput();
+    
     fetch(API_BASE + "/save_user_data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -383,12 +488,24 @@
           const emailMsg = d.email_sent
             ? "and emailed to our team."
             : `but email delivery failed${d.email_error ? " (" + d.email_error + ")" : ""}.`;
-          appendMessage(`✅ Your details have been saved ${emailMsg} Our team will contact you within 30 minutes.`);
+          
+          appendMessage(`✅ Your details have been saved ${emailMsg}`);
+          appendMessage("Our team will contact you within 30 minutes. Thank you!");
+          
+          // Enable closing ready (waiting for user to say thanks/ok)
           state.closing_ready = true;
+          
+          // Enable input so user can respond
+          enableInput("Type 'ok' or 'thanks'...");
+          
         } else {
           appendMessage("⚠️ Error saving details. Please try again or contact us directly.");
+          enableInput();
         }
       })
-      .catch(() => appendMessage("⚠️ Error saving details."));
+      .catch(() => {
+        appendMessage("⚠️ Error saving details.");
+        enableInput();
+      });
   }
 })();
