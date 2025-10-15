@@ -10,7 +10,6 @@
   const sendBtn = document.getElementById("send-btn");
   const chatWidget = document.getElementById("chat-widget");
 
-  // Ensure widget visible (no launcher / no X)
   if (chatWidget) chatWidget.style.display = "flex";
 
   function appendMessage(text, sender = "bot") {
@@ -55,22 +54,39 @@
       budget_amount: null,
       start_time: null,
       cv_filename: null,
+      closing_ready: false,
+      closing_sent: false
     };
   }
   let state = getInitialState();
 
-  // Start
+  const CLOSING_REGEX = /\b(thanks|thank\s*you|thanku|thx|ty|ok|okay|k|sure|great|awesome|cool|perfect|done|noted|sounds\s*good|cheers)\b/i;
+
+  function maybeHandleClosing(userText) {
+    if (!state.closing_ready || state.closing_sent) return false;
+    if (!CLOSING_REGEX.test(userText)) return false;
+
+    const name = state.name ? `, ${state.name}` : "";
+    const company = state.company_name ? ` with ${state.company_name}` : "";
+    appendMessage(
+      `You're most welcome${name}! We're delighted to work${company}. Our team will reach out within 30 minutes. You can also contact us at partha@infinitetechai.com | +91 98847 77171. Have a great day!`
+    );
+    state.closing_sent = true;
+    return true;
+  }
+
   function startIntro() {
     appendMessage("👋 Hello! Welcome. May I know your name?");
   }
   startIntro();
 
-  // Events
   sendBtn.addEventListener("click", () => {
     const text = inputEl.value.trim();
     if (!text) return;
     appendMessage(text, "user");
     inputEl.value = "";
+
+    if (maybeHandleClosing(text)) return;
     handleTextResponse(text);
   });
   inputEl.addEventListener("keydown", e => {
@@ -80,7 +96,6 @@
     }
   });
 
-  // Steps
   function handleTextResponse(text) {
     switch (state.step) {
       case 0:
@@ -145,12 +160,10 @@
       }
 
       default:
-        // Ignore extra text input on steps handled via buttons
         break;
     }
   }
 
-  // Flow
   function showMainOptions() {
     appendMessage("Are you looking for a job or a service/product?");
     createButtons([
@@ -273,12 +286,11 @@
     summarizeDetails();
   }
 
-  // Upload UI (Job)
   function showUploadUI() {
     const box = document.createElement("div");
     box.innerHTML = `
-      <div style="margin-top:6px;">
-        <input id="cv-file" type="file" accept="application/pdf" />
+      <div style="margin-top:8px;">
+        <input id="cv-file" type="file" accept="application/pdf" style="font-family:inherit;font-size:14px;" />
         <button id="upload-btn" class="option-btn" type="button">Upload</button>
         <div id="upload-status" class="small"></div>
       </div>
@@ -309,11 +321,12 @@
             state.cv_filename = d.filename;
             appendMessage("✅ CV uploaded successfully!");
             if (d.email_sent) {
-              appendMessage("📧 CV emailed to our sales team.");
+              appendMessage("📧 CV emailed to our HR team.");
             } else if (d.email_error) {
               appendMessage("⚠️ CV email failed: " + d.email_error);
             }
-            appendMessage("Thanks! Our team will contact you within 30 mins.");
+            appendMessage("Thanks! Our team will contact you within 30 minutes.");
+            state.closing_ready = true;
           } else {
             status.textContent = d.error || "Upload failed.";
           }
@@ -323,7 +336,6 @@
     });
   }
 
-  // Summary / Declaration (only for Service/Product)
   function summarizeDetails() {
     fetch(API_BASE + "/summarize", {
       method: "POST",
@@ -333,7 +345,7 @@
       .then(r => r.json())
       .then(d => {
         if (!d.ok) return appendMessage("Error generating summary.");
-        appendMessage("Here’s your estimated cost breakdown:");
+        appendMessage("Here's your estimated cost breakdown:");
         const div = document.createElement("div");
         div.className = "summary-block";
         div.innerHTML = d.summary;
@@ -359,7 +371,7 @@
   }
 
   function saveUserData() {
-    appendMessage("📧 Sending your details to our sales team...", "bot");
+    appendMessage("📧 Sending your details to our team...", "bot");
     fetch(API_BASE + "/save_user_data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -369,11 +381,12 @@
       .then(d => {
         if (d.ok) {
           const emailMsg = d.email_sent
-            ? "and emailed to our sales team."
+            ? "and emailed to our team."
             : `but email delivery failed${d.email_error ? " (" + d.email_error + ")" : ""}.`;
-          appendMessage(`✅ Your details have been saved ${emailMsg} Our team will contact you within 30 mins.`);
+          appendMessage(`✅ Your details have been saved ${emailMsg} Our team will contact you within 30 minutes.`);
+          state.closing_ready = true;
         } else {
-          appendMessage("⚠️ Error saving details: " + (d.error || "Unknown error"));
+          appendMessage("⚠️ Error saving details. Please try again or contact us directly.");
         }
       })
       .catch(() => appendMessage("⚠️ Error saving details."));
