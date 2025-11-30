@@ -360,26 +360,26 @@ def data_api_insert_one(collection: str, document: dict):
         return False, None, str(e)
 
 # def save_doc_resilient(collection: str, doc: dict):
-    get_mongo_client()
+    # get_mongo_client()
     
-    target_col = None
-    if collection == (MONGO_APPLICATIONS_COLLECTION or "applications"):
-        target_col = mongo_applications_col
-    elif collection == (MONGO_COLLECTION or "leads"):
-        target_col = mongo_col
+    # target_col = None
+    # if collection == (MONGO_APPLICATIONS_COLLECTION or "applications"):
+    #     target_col = mongo_applications_col
+    # elif collection == (MONGO_COLLECTION or "leads"):
+    #     target_col = mongo_col
     
-    if MONGO_READY and target_col is not None:
-        try:
-            res = target_col.insert_one(doc)
-            return {"ok": True, "backend": "mongo", "id": str(res.inserted_id), "error": ""}
-        except Exception as e:
-            log.error(f"[Mongo] Insert error: {str(e)}")
+    # if MONGO_READY and target_col is not None:
+    #     try:
+    #         res = target_col.insert_one(doc)
+    #         return {"ok": True, "backend": "mongo", "id": str(res.inserted_id), "error": ""}
+    #     except Exception as e:
+    #         log.error(f"[Mongo] Insert error: {str(e)}")
     
-    ok, inserted_id, err = data_api_insert_one(collection, doc)
-    if ok:
-        return {"ok": True, "backend": "data_api", "id": inserted_id, "error": ""}
+    # ok, inserted_id, err = data_api_insert_one(collection, doc)
+    # if ok:
+    #     return {"ok": True, "backend": "data_api", "id": inserted_id, "error": ""}
     
-    return {"ok": False, "backend": "none", "id": None, "error": err or MONGO_LAST_ERROR}
+    # return {"ok": False, "backend": "none", "id": None, "error": err or MONGO_LAST_ERROR}
 # In app.py
 
 def save_doc_resilient(collection: str, doc: dict):
