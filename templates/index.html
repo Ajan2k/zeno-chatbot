@@ -1,56 +1,263 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Hybrid Chatbot Prototype</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-      :root { --accent:#ff8c00; --accent-light:#fff5e6; --bg:#fffaf5; --text:#222; }
-      body { font-family:"Inter", Arial, sans-serif; background:var(--bg); margin:0; display:flex; align-items:center; justify-content:center; height:100vh; }
-      .chat-widget { width:420px; max-width:96vw; background:#fff; border-radius:16px; box-shadow:0 6px 30px rgba(255,140,0,0.25); position:relative; overflow:hidden; display:flex; flex-direction:column; transition:transform .18s ease, opacity .18s ease; }
-      .chat-widget.minimize { transform:scale(0.9) translateY(16px); opacity:0; }
-      .close-btn { position:absolute; right:10px; top:10px; background:var(--accent); color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:none; transition:.2s; font-weight:700; }
-      .close-btn:hover { transform:rotate(90deg); }
-      .header { padding:14px 18px; background:var(--accent); color:#fff; font-weight:600; font-size:16px; display:flex; align-items:center; justify-content:space-between; }
-      .messages { height:460px; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth; }
-      .message { max-width:80%; padding:10px 12px; border-radius:10px; line-height:1.4; word-wrap:break-word; }
-      .bot { background:var(--accent-light); color:var(--text); align-self:flex-start; }
-      .user { background:var(--accent); color:#fff; align-self:flex-end; }
-      .input-area { padding:12px; border-top:1px solid #eee; display:flex; gap:8px; align-items:center; }
-      input[type="text"] { flex:1; padding:10px; border-radius:8px; border:1px solid #ddd; font-size:14px; outline:none; }
-      input[type="text"]:focus { border-color:var(--accent); box-shadow:0 0 3px rgba(255,140,0,0.3); }
-      button { padding:10px 12px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; transition:.2s; }
-      button:hover { background:#e67e00; }
-      .options { display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
-      .option-btn { padding:8px 10px; background:var(--accent); color:#fff; border-radius:8px; cursor:pointer; border:none; transition:.2s; }
-      .option-btn:hover { background:#e67e00; }
-      .summary-block { background:#fff8ef; padding:10px; border-radius:8px; border:1px dashed #ffcc80; white-space:normal; font-size:14px; }
-      .small { font-size:12px; color:#999; margin-top:4px; }
-      .estimate-title { font-weight:600; margin:8px 0 4px; }
-      .estimate-table { width:100%; border-collapse:collapse; margin-top:6px; font-size:13px; }
-      .estimate-table th, .estimate-table td { border:1px solid #ffd5a3; padding:6px 8px; text-align:left; }
-      .estimate-table th { background:var(--accent-light); }
-      /* Floating circular launcher */
-      .chat-launcher { position:fixed; right:20px; bottom:20px; width:60px; height:60px; border-radius:50%; box-shadow:0 10px 25px rgba(0,0,0,0.15); background:#fff; display:none; align-items:center; justify-content:center; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease, opacity .18s ease; z-index:9999; overflow:hidden; }
-      .chat-launcher img { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; }
-      .chat-launcher:hover { transform:scale(1.05); box-shadow:0 12px 28px rgba(0,0,0,0.2); }
-      .chat-launcher.show { display:flex; opacity:1; }
-    </style>
-  </head>
-  <body>
-    <div id="chat-launcher" class="chat-launcher" title="Chat with us">
-      <img src="/static/chat-launcher.png" alt="Chat" />
-    </div>
+<head>
+  <meta charset="utf-8" />
+  <title>Zeno Chatbot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { 
+      background: #fff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-    <div class="chat-widget" id="chat-widget">
-      <button class="close-btn" id="close-btn" title="Minimize">✕</button>
-      <div class="header"><span>Zeno Chatbot</span></div>
+    #zeno-chat {
+      --accent: #ff8c00;
+      --accent-light: #fff5e6;
+      --bg: #fff;
+      --text: #222;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #zeno-chat .chat-widget {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      z-index: 1;
+    }
+
+    .header {
+      padding: 16px 20px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex: 0 0 auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .restart-icon {
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      transition: background 0.2s;
+      display: none;
+    }
+    .restart-icon:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .restart-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: #fff;
+    }
+    .restart-icon.visible {
+      display: block;
+    }
+
+    .messages {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+      background: #fafafa;
+    }
+    .message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.5;
+      word-wrap: break-word;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+    }
+    .bot { 
+      background: #fff; 
+      color: var(--text); 
+      align-self: flex-start;
+      border: 1px solid #e5e5e5;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .user { 
+      background: var(--accent); 
+      color: #fff; 
+      align-self: flex-end;
+      box-shadow: 0 1px 3px rgba(255,140,0,0.3);
+    }
+
+    .input-area {
+      flex: 0 0 auto;
+      padding: 16px;
+      border-top: 1px solid #e5e5e5;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: #fff;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+      transition: opacity 0.2s ease;
+    }
+    .input-area.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      font-size: 15px;
+      outline: none;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255,140,0,0.1);
+    }
+    input[type="text"]:disabled {
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+    button {
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 15px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+    button:hover:not(:disabled) { 
+      background: #e67e00;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(255,140,0,0.3);
+    }
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .options {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .option-btn {
+      padding: 10px 14px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 10px;
+      cursor: pointer;
+      border: none;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+    .option-btn:hover:not([disabled]) {
+      background: #e67e00;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(255,140,0,0.3);
+    }
+    .option-btn[disabled] { 
+      opacity: 0.5; 
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .summary-block {
+      background: #fff8ef;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #ffe0b2;
+      white-space: normal;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .small { 
+      font-size: 13px; 
+      color: #666; 
+      margin-top: 6px; 
+    }
+    .estimate-title { 
+      font-weight: 600; 
+      font-size: 16px;
+      margin: 10px 0 6px;
+      color: #333;
+    }
+    .estimate-table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 8px; 
+      font-size: 14px; 
+    }
+    .estimate-table th, .estimate-table td { 
+      border: 1px solid #ffd5a3; 
+      padding: 8px 10px; 
+      text-align: left; 
+    }
+    .estimate-table th { 
+      background: #fff3e0;
+      font-weight: 600;
+    }
+
+    .chat-launcher, .close-btn { display: none !important; }
+
+    @media (max-width: 640px) {
+      .header { font-size: 16px; padding: 14px 16px; }
+      .messages { padding: 16px; }
+      input[type="text"] { font-size: 16px; }
+      .message { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="zeno-chat" data-api-base="">
+    <div class="chat-widget" id="chat-widget" role="dialog" aria-label="Zeno Chatbot">
+      <div class="header">
+        <span>Zeno Chatbot</span>
+        <div class="restart-icon" id="restart-icon" title="Restart conversation">
+          <svg viewBox="0 0 24 24">
+            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+        </div>
+      </div>
       <div class="messages" id="messages" aria-live="polite"></div>
       <div class="input-area" id="input-area">
-        <input id="user-input" type="text" placeholder="Type your answer..." autofocus />
-        <button id="send-btn">Send</button>
+        <input id="user-input" type="text" placeholder="Type your answer..." autocomplete="off" />
+        <button id="send-btn" type="button">Send</button>
       </div>
     </div>
-    <script src="/static/chat.js"></script>
-  </body>
+  </div>
+  <noscript>This app requires JavaScript to run.</noscript>
+  <script src="/static/chat.js"></script>
+</body>
 </html>

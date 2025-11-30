@@ -1,6 +1,11 @@
-Flask==2.3.2
-python-dotenv==1.0.0
-python-dotenv
-groq
-pymongo
-sendgrid
+Flask>=3,<4
+python-dotenv>=1.0
+pymongo[srv]>=4.8
+dnspython>=2.4
+certifi>=2024.2.2
+requests>=2.31
+sendgrid>=6.11
+flask-cors>=4.0
+groq>=0.9
+Werkzeug>=3.0
+gunicorn 

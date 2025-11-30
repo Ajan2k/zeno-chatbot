@@ -1,10 +1,14 @@
 # Python virtual environment
 .venv/
 
-
+__pycache__/
 
 # Environment variables
 .env
 
 # Uploads folder (if you don't want to track user uploads)
 uploads/
+
+openai high 5 files/
+
+debugcode.py
